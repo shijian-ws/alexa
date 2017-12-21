@@ -18,7 +18,7 @@ import boto3
 # 日志开关
 log_flag = True
 # 服务器地址
-url = 'http://127.0.0.1:8080/api/alexa/v3'
+url = 'http://127.0.0.1:8888/api/alexa/v3'
 
 
 # Lambda服务主函数
@@ -40,7 +40,7 @@ def lambda_handler(event, context):
         # 设备控制
         result = control(log_id, namespace, event)
 
-    if log_flag == True:
+    if log_flag == True and result:
         # 更新日志
         save_or_update_log(namespace=namespace, id=log_id, resp=result)
 
@@ -49,7 +49,6 @@ def lambda_handler(event, context):
 
 
 # 日志保存函数, id: 日志主键, event: Alexa请求参数, resp: Lambda响应Alexa参数, server: 服务器响应Lambda参数
-# 注意 本地测试如果没有boto3库, 可以将该函数中代码注释成空函数, 并将导入boto3库命令注释
 def save_or_update_log(namespace=None, id=None, req=None, resp=None, server=None):
     # 获取client对象, region_name: 数据库所在区域
     client = boto3.resource('dynamodb', region_name='us-east-1')
@@ -78,7 +77,7 @@ def save_or_update_log(namespace=None, id=None, req=None, resp=None, server=None
         if resp != None:
             expression += 'z_resp=:resp,'
             values[':resp'] = dumps(resp)
-        elif server != None:
+        if server != None:
             expression += 'z_server=:server,'
             values[':server'] = dumps(server)
         expression = expression[:-1]  # 截取
@@ -108,8 +107,7 @@ def get_map(exp, map):
 
 
 # 处理远程响应数据
-def get_remote_response(message_id, correlation_token, endpoint_id, access_token, resp):
-    name = 'Response'
+def get_remote_response(namespace='Alexa', name='Response', message_id=None, correlation_token=None, endpoint_id=None, access_token=None, resp=None):
     properties = None
     payload = None
     if 'status' not in resp.keys() or resp['status'] == 0:
@@ -127,6 +125,9 @@ def get_remote_response(message_id, correlation_token, endpoint_id, access_token
         if status == 40001:
             type = 'EXPIRED_AUTHORIZATION_CREDENTIAL'
             message = 'The OAuth2 access token for that customer has expired.'
+        elif status < 0:
+            type = 'BRIDGE_UNREACHABLE'
+            message = 'The target bridge endpoint is currently unreachable or offline';
         payload = {
             'type': type,
             'message': message
@@ -134,28 +135,37 @@ def get_remote_response(message_id, correlation_token, endpoint_id, access_token
     result = {
         'event': {
             'header': {
-                'namespace': 'Alexa',
+                'namespace': namespace,
                 'name': name,
                 'payloadVersion': '3',
                 'messageId': message_id,
                 'correlationToken': correlation_token
-            },
-            'endpoint': {
+            }
+        }
+    }
+
+    if correlation_token == None:
+        result['event']['header'].pop('correlationToken')
+
+    if properties == None:
+        # 出现错误
+        result['event']['payload'] = payload
+    else:
+        if name == 'Discover.Response':
+            # 设备发现
+            result['event']['payload'] = {
+                'endpoints': properties
+            }
+        else:
+            # 设备控制
+            result['context'] = {'properties': properties}
+            result['endpoint'] = {
                 'scope': {
                     'type': 'BearerToken',
                     'token': access_token
                 },
                 'endpointId': endpoint_id
-            },
-            'payload': {}
-        }
-    }
-    if properties != None:
-        # 成功
-        result['context'] = {'properties': properties}
-    else:
-        # 出现错误
-        result['event']['payload'] = payload
+            }
     return result
 
 
@@ -166,13 +176,13 @@ def discovery(log_id, namespace, event):
 
     resp = send(url + '/discovery', headers)  # 请求服务端获取响应
 
-    if log_flag == True:
+    if log_flag == True and resp:
         save_or_update_log(namespace=namespace, id=log_id, server=resp)  # 记录日志
 
     req_header = get_map('directive\nheader', event)  # 获取Alexa请求头
     message_id = req_header['messageId']  # 获取当前命令id
 
-    return get_remote_response(message_id, None, None, token, resp);
+    return get_remote_response(namespace='Alexa.Discovery', name='Discover.Response', message_id=message_id, correlation_token=None, endpoint_id=None, access_token=token, resp=resp);
 
 
 # 获取远程控制数据
@@ -203,13 +213,13 @@ def control(log_id, namespace, event):
     data = get_control_data(namespace, name, endpoint_id, parameter)
 
     resp = send(url + '/remote_control', headers, data=dumps(data), method='POST')
-    if log_flag == True:
+    if log_flag == True and resp:
         save_or_update_log(namespace=namespace, id=log_id, server=resp)  # 记录日志
 
     message_id = req_header['messageId']  # 获取当前命令id
     correlation_token = get_map('correlationToken', req_header)  # 获取相关Token
 
-    return get_remote_response(message_id, correlation_token, endpoint_id, token, resp)
+    return get_remote_response(message_id=message_id, correlation_token=correlation_token, endpoint_id=endpoint_id, access_token=token, resp=resp)
 
 
 # http请求
@@ -219,11 +229,14 @@ def send(url, headers={}, data=None, method='GET'):
             # 存在数据, UTF-8编码
             data = data.encode('utf-8')
         rep = request.Request(url=url, data=data, headers=headers, method=method)
-        resp = request.urlopen(rep)
-        respBody = resp.read()
-        return loads(respBody.decode('utf-8'))  # JSON解码
+        resp = request.urlopen(rep) # timeout=4
+        respBody = resp.read().decode('utf-8')
+        return loads(respBody)  # JSON解码
+    except error.HTTPError as e:
+        return {'status': -2, 'msg': dumps(e.reason.args), 'code': e.code}
     except error.URLError as e:
-        return {'status': -1, 'msg': e}
+        return {'status': -1, 'msg': dumps(e.reason.args)}
+
 '''
 # 设备发现, 本地测试
 e = {
