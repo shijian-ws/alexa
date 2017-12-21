@@ -1,0 +1,98 @@
+# Spring全局配置
+spring:
+    profiles:
+        # 引用product配置参数,本地开发配置-Dspring.profiles.active=local即可覆盖当前参数
+        #org.springframework.boot.context.config.ConfigFileApplicationListener.ACTIVE_PROFILES_PROPERTY
+        active: local
+        # 包含mysql配置参数
+        #org.springframework.boot.context.config.ConfigFileApplicationListener.INCLUDE_PROFILES_PROPERTY
+        #include: mysql
+
+    # 默认数据库连接池配置
+    datasource: 
+        driverClassName: org.sqlite.JDBC
+        url: jdbc:sqlite:alexa.db
+        schema: classpath:sql/schema-sqlite.sql
+        data: classpath:sql/data.sql
+        sql-script-encoding: UTF-8
+        initialize: true
+
+        tomcat: 
+            initialSize: 5
+            maxActive: 60
+            maxIdle: 10
+            minIdle: 5
+            maxWait: 5000
+            testWhileIdle: true
+            validationQuery: SELECT 1
+            validationQueryTimeout: 10
+            validationInterval: 3000
+            timeBetweenEvictionRunsMillis: 3100
+            minEvictableIdleTimeMillis: 120000
+            numTestsPerEvictionRun: 10
+            removeAbandoned: true
+            removeAbandonedTimeout: 180
+            defaultAutoCommit: false
+
+    # JSON配置
+    jackson: 
+        # 蛇形命名
+        #propertyNamingStrategy: SNAKE_CASE
+
+        serialization: 
+            # 关闭为null的对象抛出异常，解决懒加载
+            FAIL_ON_EMPTY_BEANS: false
+            # 开启格式化输出JSON，默认没有换行
+            #INDENT_OUTPUT: true
+
+        deserialization: 
+            # 关闭未知属性抛出异常，忽略JavaBean中没有的属性
+            FAIL_ON_UNKNOWN_PROPERTIES: false
+            # 将空串("")转换为null
+            ACCEPT_EMPTY_STRING_AS_NULL_OBJECT: true
+
+        # 不将空属性值写入JSON
+        defaultPropertyInclusion: NON_EMPTY
+
+        # mapper: # com.fasterxml.jackson.databind.MapperFeature
+
+        parser: 
+            # 允许属性名称没有引号包裹
+            ALLOW_UNQUOTED_FIELD_NAMES: true
+            # 允许属性名称使用单引号('')包裹
+            ALLOW_SINGLE_QUOTES: true
+            # 允许出现特殊字符和转义字符，小于32的ASCII
+            ALLOW_UNQUOTED_CONTROL_CHARS: true
+
+        # generator: # com.fasterxml.jackson.core.JsonGenerator
+
+    # HTTP配置
+    http:
+        encoding:
+            charset: UTF-8
+        converters:
+            preferred-json-mapper: jackson
+
+    # MVC配置
+    mvc:
+        throw-exception-if-no-handler-found: true
+        favicon:
+            enabled: false
+
+
+mybatis:
+    mapperLocations: classpath*:dao/I**DAO.xml
+    #typeAliasesPackage: org.sj.alexa.model.v3
+
+pagehelper:
+    # 指定使用数据库
+    #dialect: com.github.pagehelper.dialect.helper.MySqlDialect
+    # 进行count查询
+    rowBoundsWithCount: true
+    # 是否进行合理化查询, pageNum<1, pageNum>pages
+    reasonable: true
+
+# HTTP服务器配置
+server:
+    # 服务端口
+    port: 8888

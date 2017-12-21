@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.sj.alexa.dao.IAlexaDAO">
+
+    <!-- Alexa可控设备信息 -->
+    <resultMap id="alexaEndpointResultMap" type="org.sj.alexa.model.v3.AlexaEndpoint">
+        <id property="endpointId" column="ID" javaType="string"/>
+        <result column="FRIENDLY_NAME" property="friendlyName" javaType="string"/>
+        <result column="DESCRIPTION" property="description" javaType="string"/>
+        <result column="MANUFACTURER_NAME" property="manufacturerName" javaType="string"/>
+        <result column="_CATEGORY" property="category" javaType="string"/>
+
+        <result column="USER_ID" property="userId" javaType="string"/>
+        <result column="GATEWAY" property="gateway" javaType="string"/>
+        <result column="_OPER_ID" property="operId" javaType="string"/>
+        <result column="CREATION_TIME" property="creationTime" javaType="long"/>
+
+
+        <!-- 级联查询, 调用listCapabilityByEndpointId方法, 并将ID起个别名传递给查询方法-->
+        <collection property="capabilities" ofType="org.sj.alexa.model.v3.Capability" select="listCapabilityByEndpointId" column="endpointId,ID"/>
+    </resultMap>
+
+    <!-- Alexa可控设备功能 -->
+    <resultMap id="capabilityResultMap" type="org.sj.alexa.model.v3.Capability">
+        <id property="id" column="ID" javaType="string"/>
+        <result column="TYPE" property="type" javaType="string"/>
+        <result column="INTERFACE" property="interface" javaType="string"/>
+        <result column="VERSION" property="version" javaType="string"/>
+        <result column="ENDPOINT_ID" property="endpointId" javaType="string"/>
+        <collection property="properties" ofType="org.sj.alexa.model.v3.Properties" select="listPropertyByCapabilityId" column="capabilityId,ID,interface,INTERFACE"/>
+    </resultMap>
+
+    <!-- Alexa可控设备功能属性 -->
+    <resultMap id="propertiesResultMap" type="org.sj.alexa.model.v3.Properties">
+        <id property="id" column="ID" javaType="string"/>
+        <result column="PROACTIVELY_REPORTED" property="proactivelyReported" javaType="boolean"/>
+        <result column="RETRIEVABLE" property="retrievable" javaType="boolean"/>
+        <result column="CAPABILITY_ID" property="capabilityId" javaType="string"/>
+        <collection property="supported" ofType="hashmap" select="listPropertySupportByInterface" column="interface,INTERFACE"/>
+    </resultMap>
+
+    <!-- Alexa可控设备功能接口支持的属性 -->
+    <resultMap id="supportResultMap" type="org.sj.alexa.model.v3.Support">
+        <id property="id" column="INTERFACE" javaType="string"/>
+        <result column="NAME" property="name" javaType="string"/>
+    </resultMap>
+
+    <sql id="alexaEndpointField">
+        ID, FRIENDLY_NAME, DESCRIPTION, MANUFACTURER_NAME, _CATEGORY, USER_ID, GATEWAY, _OPER_ID, CREATION_TIME
+    </sql>
+
+    <sql id="capabilityField">
+        ID, TYPE, INTERFACE, VERSION, ENDPOINT_ID
+    </sql>
+
+    <sql id="propertyField">
+        ID, PROACTIVELY_REPORTED, RETRIEVABLE, CAPABILITY_ID, <if test="interface!=null">'${interface}' AS INTERFACE</if> <!-- 因为property本身并没有INTERFACE字段, 所以判断如果存在interface变量则动态生成一个字段 -->
+    </sql>
+
+    <sql id="supportField">
+        NAME
+    </sql>
+
+    <!-- 关联查询 -->
+    <select id="listCapabilityByEndpointId" resultMap="capabilityResultMap">
+        SELECT <include refid="capabilityField"/> FROM T_ALEXA_CAPABILITY WHERE ENDPOINT_ID=#{endpointId}
+    </select>
+
+    <!-- 关联查询 -->
+    <select id="listPropertyByCapabilityId" resultMap="propertiesResultMap">
+        SELECT <include refid="propertyField"/> FROM T_ALEXA_PROPERTY WHERE CAPABILITY_ID=#{capabilityId}
+    </select>
+
+    <!-- 关联查询 -->
+    <select id="listPropertySupportByInterface" resultMap="supportResultMap">
+        SELECT <include refid="supportField"/> FROM T_ALEXA_SUPPORT WHERE INTERFACE=#{interface}
+    </select>
+
+    <select id="listAlexaEndpointByUserId" resultMap="alexaEndpointResultMap">
+        SELECT <include refid="alexaEndpointField"/> FROM T_ALEXA_ENDPOINT WHERE USER_ID=#{userId}
+    </select>
+
+    <select id="listAlexaEndpointByUserIdAndGateway" resultMap="alexaEndpointResultMap">
+        SELECT <include refid="alexaEndpointField"/> FROM T_ALEXA_ENDPOINT WHERE GATEWAY=#{gateway} AND USER_ID=#{userId}
+    </select>
+
+    <select id="getAlexaEndpointById" resultMap="alexaEndpointResultMap">
+        SELECT <include refid="alexaEndpointField"/> FROM T_ALEXA_ENDPOINT WHERE ID=#{endpointId}
+    </select>
+
+    <select id="getAlexaEndpointByCategory" resultMap="alexaEndpointResultMap">
+        SELECT <include refid="alexaEndpointField"/> FROM T_ALEXA_ENDPOINT WHERE (_OPER_ID LIKE '%${operId}%' OR _OPER_ID LIKE '${operId}%') AND _CATEGORY=#{category} AND GATEWAY=#{gateway} AND USER_ID=#{userId}
+    </select>
+
+    <select id="checkSupportName" resultType="_boolean">
+        SELECT COUNT(1) FROM T_ALEXA_SUPPORT WHERE NAME=#{name} AND INTERFACE=#{interface}
+    </select>
+
+    <insert id="saveAlexaProperties">
+        INSERT INTO T_ALEXA_PROPERTY (ID, PROACTIVELY_REPORTED, RETRIEVABLE, CAPABILITY_ID) VALUES (#{id}, #{proactivelyReported}, #{retrievable}, #{capabilityId});
+    </insert>
+
+    <insert id="saveAlexaCapability">
+        INSERT INTO T_ALEXA_CAPABILITY (ID, TYPE, INTERFACE, VERSION, ENDPOINT_ID) VALUES (#{id}, #{type}, #{interface}, #{version}, #{endpointId});
+    </insert>
+
+    <insert id="saveAlexaEndpoint">
+        INSERT INTO T_ALEXA_endpoint(ID, FRIENDLY_NAME, DESCRIPTION, MANUFACTURER_NAME, _CATEGORY, USER_ID, GATEWAY, _OPER_ID, CREATION_TIME) VALUES (#{endpointId}, #{friendlyName}, #{description}, #{manufacturerName}, #{category}, #{userId}, #{gateway}, #{operId}, #{creationTime});
+    </insert>
+
+    <delete id="removeAlexaPropertiesByCapabilityId">
+        DELETE FROM T_ALEXA_PROPERTY WHERE CAPABILITY_ID=#{capabilityId}
+    </delete>
+
+    <delete id="removeAlexaCapabilityByEndpointId">
+        DELETE FROM T_ALEXA_CAPABILITY WHERE ENDPOINT_ID=#{endpointId}
+    </delete>
+
+    <delete id="removeAlexaEndpointById">
+        DELETE FROM T_ALEXA_endpoint WHERE ID=#{endpointId}
+    </delete>
+</mapper>
