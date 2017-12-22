@@ -2,6 +2,7 @@ package org.sj.alexa.util;
 
 import org.sj.alexa.model.v3.AlexaEndpoint;
 import org.sj.alexa.model.v3.Capability;
+import org.sj.alexa.model.v3.Properties;
 import org.sj.alexa.model.v3.Support;
 
 import java.util.ArrayList;
@@ -100,5 +101,33 @@ public class AlexaUtil {
         }
         capability.setProperties(props);
         return capability;
+    }
+
+    /**
+     * 检查可控设备是否灯设备
+     */
+    public static boolean checkOper(AlexaEndpoint endpoint, String name) {
+        List<Capability> capabilities = endpoint.getCapabilities();
+        if (capabilities != null) {
+            return capabilities.parallelStream()
+                    .filter(capability -> capability.getProperties() != null).map(Capability::getProperties)
+                    .filter(properties -> properties.getSupported() != null).map(Properties::getSupported)
+                    .flatMap(support -> support.parallelStream()).map(Support::getName).filter(name::equals).count() != 0;
+        }
+        return false;
+    }
+
+    /**
+     * 检查可控设备是否情景
+     */
+    public static boolean checkScene(AlexaEndpoint endpoint) {
+        return AlexaEndpoint.NAME_SCENE_TRIGGER.equals(endpoint.getCategory());
+    }
+
+    /**
+     * 检查可控设备是否灯设备
+     */
+    public static boolean checkLight(AlexaEndpoint endpoint) {
+        return AlexaEndpoint.NAME_LIGHT.equals(endpoint.getCategory());
     }
 }

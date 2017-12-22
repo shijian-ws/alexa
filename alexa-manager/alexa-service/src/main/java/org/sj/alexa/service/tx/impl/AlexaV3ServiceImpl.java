@@ -1,16 +1,17 @@
-package org.sj.alexa.service.impl;
+package org.sj.alexa.service.tx.impl;
 
-import org.sj.alexa.dao.IAlexaDAO;
+import org.sj.alexa.dao.IAlexaV3DAO;
 import org.sj.alexa.model.v3.*;
 import org.sj.alexa.model.v3.AlexaControlVO.Color;
-import org.sj.alexa.service.IAlexaService;
+import org.sj.alexa.service.tx.IAlexaV3Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 /**
  * @author shijian
@@ -18,9 +19,9 @@ import java.util.function.Function;
  * @date 2017-12-19
  */
 @Service
-public class AlexaServiceImpl implements IAlexaService {
+public class AlexaV3ServiceImpl implements IAlexaV3Service {
     @Autowired
-    private IAlexaDAO alexaDAO;
+    private IAlexaV3DAO alexaDAO;
 
     @Override
     public List<AlexaEndpoint> listAlexaEndpoint(String userId) {
@@ -158,7 +159,7 @@ public class AlexaServiceImpl implements IAlexaService {
     }
 
     @Override
-    public AlexaControlVO remoteControl(AlexaControlVO vo, Function<AlexaControlVO, ?> func) {
+    public AlexaControlVO remoteControl(AlexaControlVO vo, BiConsumer<AlexaEndpoint, AlexaControlVO> func) {
         if (vo == null) {
             throw new IllegalArgumentException("远程控制参数对象不能为空!");
         }
@@ -170,6 +171,9 @@ public class AlexaServiceImpl implements IAlexaService {
         if (endpoint == null) {
             throw new IllegalArgumentException("未找到Alexa可控设备空!");
         }
+        if (!endpoint.getUserId().equals(vo.getUserId())) {
+            throw new IllegalArgumentException("Alexa可控设备所属用户与登录用户不匹配!");
+        }
         String name = vo.getName();
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("远程控制类型不能为空!");
@@ -179,7 +183,7 @@ public class AlexaServiceImpl implements IAlexaService {
             // 控制打开或关闭
             // TODO 发送远程控制指令
             if (func != null) {
-                func.apply(vo);
+                func.accept(endpoint, vo);
             }
             String value;
             if (AlexaControlVO.TURN_OFF.equals(name)) {
@@ -198,7 +202,7 @@ public class AlexaServiceImpl implements IAlexaService {
             }
             // TODO 发送远程控制指令
             if (func != null) {
-                func.apply(vo);
+                func.accept(endpoint, vo);
             }
             return new AlexaControlVO(Capability.INTERFACE_POWERLEVEL, Properties.NAME_POWERLEVEL, powerLevel); // 生成响应
         }
@@ -210,7 +214,7 @@ public class AlexaServiceImpl implements IAlexaService {
             }
             // TODO 发送远程控制指令
             if (func != null) {
-                func.apply(vo);
+                func.accept(endpoint, vo);
             }
             return new AlexaControlVO(Capability.INTERFACE_POWERLEVEL, Properties.NAME_POWERLEVEL, powerLevelDelta); // 生成响应
         }
@@ -223,7 +227,7 @@ public class AlexaServiceImpl implements IAlexaService {
             }
             // TODO 发送远程控制指令
             if (func != null) {
-                func.apply(vo);
+                func.accept(endpoint, vo);
             }
             return new AlexaControlVO(Capability.INTERFACE_COLOR, Properties.NAME_COLOR, color); // 生成响应
         }
@@ -239,7 +243,7 @@ public class AlexaServiceImpl implements IAlexaService {
             int warm = 0;
             // TODO 发送远程控制指令
             if (func != null) {
-                func.apply(vo);
+                func.accept(endpoint, vo);
                 Integer ctKelvin = vo.getColorTemperatureInKelvin();
                 if (ctKelvin != null) {
                     warm = ctKelvin.intValue();
@@ -255,7 +259,7 @@ public class AlexaServiceImpl implements IAlexaService {
             }
             // TODO 发送远程控制指令
             if (func != null) {
-                func.apply(vo);
+                func.accept(endpoint, vo);
                 Integer temp = vo.getColorTemperatureInKelvin();
                 if (temp != null) {
                     warm = temp;
@@ -272,7 +276,7 @@ public class AlexaServiceImpl implements IAlexaService {
             }
             // TODO 发送远程控制指令
             if (func != null) {
-                func.apply(vo);
+                func.accept(endpoint, vo);
                 Integer temp = vo.getPercentage();
                 if (temp != null) {
                     percentage = temp;
@@ -288,7 +292,7 @@ public class AlexaServiceImpl implements IAlexaService {
             }
             // TODO 发送远程控制指令
             if (func != null) {
-                func.apply(vo);
+                func.accept(endpoint, vo);
                 Integer temp = vo.getPercentageDelta();
                 if (temp != null) {
                     percentageDelta = temp;

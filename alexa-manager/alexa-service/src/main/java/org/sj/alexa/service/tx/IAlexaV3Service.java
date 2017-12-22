@@ -1,19 +1,19 @@
-package org.sj.alexa.service;
+package org.sj.alexa.service.tx;
 
 import org.sj.alexa.model.v3.AlexaControlVO;
 import org.sj.alexa.model.v3.AlexaEndpoint;
 
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.BiConsumer;
 
 /**
- * Alexa可控设备业务接口
+ * Alexa可控设备业务接口, v3
  *
  * @author shijian
  * @email shijianws@163.com
  * @date 2017-12-18
  */
-public interface IAlexaService {
+public interface IAlexaV3Service {
     /**
      * 查询指定用户授权Alexa可控设备信息
      *
@@ -53,5 +53,5 @@ public interface IAlexaService {
      * @param func 远程控制函数
      * @return
      */
-    AlexaControlVO remoteControl(AlexaControlVO vo, Function<AlexaControlVO, ?> func);
+    AlexaControlVO remoteControl(AlexaControlVO vo, BiConsumer<AlexaEndpoint, AlexaControlVO> func);
 }

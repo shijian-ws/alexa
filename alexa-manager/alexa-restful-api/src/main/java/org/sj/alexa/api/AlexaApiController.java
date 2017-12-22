@@ -4,7 +4,7 @@ import org.sj.alexa.model.v3.AlexaControlVO;
 import org.sj.alexa.model.v3.AlexaEndpoint;
 import org.sj.alexa.model.v3.Capability;
 import org.sj.alexa.model.v3.Properties;
-import org.sj.alexa.service.IAlexaService;
+import org.sj.alexa.service.tx.IAlexaV3Service;
 import org.sj.alexa.util.AlexaUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +26,7 @@ import java.util.Map;
 @RequestMapping("/api/alexa")
 public class AlexaApiController {
     @Autowired
-    private IAlexaService alexaService;
+    private IAlexaV3Service alexaV3Service;
 
     /**
      * 初始化数据
@@ -39,7 +39,7 @@ public class AlexaApiController {
             AlexaEndpoint endpoint = new AlexaEndpoint("Scene", "Sample Manufacturer", "This is Scene", userId, gateway, AlexaEndpoint.NAME_SCENE_TRIGGER, "1");
             AlexaUtil.addCapability(endpoint, AlexaUtil.createDefaultCapability());
             AlexaUtil.addCapability(endpoint, AlexaUtil.createCapability(Capability.TYPE_ALEXA_INTERFACE, Capability.INTERFACE_POWER, "3", true, false, Properties.NAME_POWERSTATE));
-            alexaService.saveAlexaEndpoint(endpoint);
+            alexaV3Service.saveAlexaEndpoint(endpoint);
         }
         {
             AlexaEndpoint endpoint = new AlexaEndpoint("Light", "Sample Manufacturer", "This is Light", userId, gateway, AlexaEndpoint.NAME_LIGHT, "1");
@@ -49,7 +49,7 @@ public class AlexaApiController {
             AlexaUtil.addCapability(endpoint, AlexaUtil.createCapability(Capability.TYPE_ALEXA_INTERFACE, Capability.INTERFACE_COLOR, "3", true, false, Properties.NAME_COLOR));
             AlexaUtil.addCapability(endpoint, AlexaUtil.createCapability(Capability.TYPE_ALEXA_INTERFACE, Capability.INTERFACE_COLORTEMPERATURE, "3", true, false, Properties.NAME_COLOR_TEMPERATURE));
             AlexaUtil.addCapability(endpoint, AlexaUtil.createCapability(Capability.TYPE_ALEXA_INTERFACE, Capability.INTERFACE_PERCENTAGE, "3", true, false, Properties.NAME_PERCENTAGE));
-            alexaService.saveAlexaEndpoint(endpoint);
+            alexaV3Service.saveAlexaEndpoint(endpoint);
         }
         return "OK";
     }
@@ -67,9 +67,9 @@ public class AlexaApiController {
         Map<String, Object> result = new HashMap<>();
         List<AlexaEndpoint> alexaEndpoints = null;
         if (gateway == null) {
-            alexaEndpoints = alexaService.listAlexaEndpoint(userId);
+            alexaEndpoints = alexaV3Service.listAlexaEndpoint(userId);
         } else {
-            alexaEndpoints = alexaService.listAlexaEndpoint(userId, gateway);
+            alexaEndpoints = alexaV3Service.listAlexaEndpoint(userId, gateway);
         }
         result.put("rows", alexaEndpoints);
         return result;
@@ -81,7 +81,7 @@ public class AlexaApiController {
     @PostMapping("/v3/remote_control")
     public Object remoteControl(@RequestBody AlexaControlVO vo, HttpServletRequest request) {
         Map<String, Object> result = new HashMap<>();
-        AlexaControlVO resp = alexaService.remoteControl(vo, null);
+        AlexaControlVO resp = alexaV3Service.remoteControl(vo, null);
         List<AlexaControlVO> rows = new ArrayList<>();
         if (resp != null) {
             rows.add(resp);

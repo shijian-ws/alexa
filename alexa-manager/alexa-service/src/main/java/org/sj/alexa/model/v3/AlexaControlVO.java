@@ -12,6 +12,8 @@ import java.time.format.DateTimeFormatter;
  * @date 2017-12-18
  */
 public class AlexaControlVO {
+    private String userId;
+
     private String endpointId;
     private String namespace;
     private String name;
@@ -112,6 +114,14 @@ public class AlexaControlVO {
      */
     private Integer uncertaintyInMilliseconds;
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
     public String getEndpointId() {
         return endpointId;
     }
@@ -209,31 +219,31 @@ public class AlexaControlVO {
     }*/
 
     public static class Color {
-        private double hue; // 色调, 0-360
-        private double saturation; // 饱和度, 0-1
-        private double brightness; // 亮度, 0-1
+        private float hue; // 色调, 0-360
+        private float saturation; // 饱和度, 0-1
+        private float brightness; // 亮度, 0-1
 
-        public double getHue() {
+        public float getHue() {
             return hue;
         }
 
-        public void setHue(double hue) {
+        public void setHue(float hue) {
             this.hue = hue;
         }
 
-        public double getSaturation() {
+        public float getSaturation() {
             return saturation;
         }
 
-        public void setSaturation(double saturation) {
+        public void setSaturation(float saturation) {
             this.saturation = saturation;
         }
 
-        public double getBrightness() {
+        public float getBrightness() {
             return brightness;
         }
 
-        public void setBrightness(double brightness) {
+        public void setBrightness(float brightness) {
             this.brightness = brightness;
         }
     }

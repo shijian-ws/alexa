@@ -36,7 +36,7 @@ public class TransactionConfiguration {
     public DefaultPointcutAdvisor defaultPointcutAdvisor(TransactionInterceptor interceptor) {
         // 切入点
         AspectJExpressionPointcut expression = new AspectJExpressionPointcut();
-        expression.setExpression("execution(* org.sj.alexa.service.I*Service.*(..))");
+        expression.setExpression("execution(* org.sj.alexa.service.tx.I*Service.*(..))");
         return new DefaultPointcutAdvisor(expression, interceptor);
     }
 }

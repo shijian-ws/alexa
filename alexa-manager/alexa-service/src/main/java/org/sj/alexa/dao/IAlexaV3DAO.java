@@ -16,7 +16,7 @@ import java.util.List;
  * @date 2017-12-18
  */
 @Mapper
-public interface IAlexaDAO {
+public interface IAlexaV3DAO {
     /**
      * 查询指定用户授权Alexa可控设备信息
      *
