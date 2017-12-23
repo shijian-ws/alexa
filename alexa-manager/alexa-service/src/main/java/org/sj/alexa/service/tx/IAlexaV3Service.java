@@ -37,6 +37,11 @@ public interface IAlexaV3Service {
     void saveAlexaEndpoint(AlexaEndpoint alexaEndpoint);
 
     /**
+     * 更新Alexa可控设备信息
+     */
+    void updateAlexaEndpoint(AlexaEndpoint alexaEndpoint);
+
+    /**
      * 移除Alexa可控设备信息
      */
     void removeAlexaEndpoint(String userId);

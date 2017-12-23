@@ -79,9 +79,13 @@ public class Capability {
      */
     public static final String INTERFACE_POWER = "Alexa.PowerController";
     /**
-     * 控制亮度等级
+     * 控制功率
      */
     public static final String INTERFACE_POWERLEVEL = "Alexa.PowerLevelController";
+    /**
+     * 控制亮度
+     */
+    public static final String INTERFACE_BRIGHTNESS = "Alexa.BrightnessController";
     /**
      * 控制颜色
      */

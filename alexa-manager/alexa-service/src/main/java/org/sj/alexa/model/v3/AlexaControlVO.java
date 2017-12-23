@@ -26,13 +26,21 @@ public class AlexaControlVO {
      */
     public static final String TURN_ON = "TurnOn";
     /**
-     * 设置亮度绝对值
+     * 设置功率绝对值
      */
     public static final String SET_POWER_LEVEL = "SetPowerLevel";
     /**
-     * 调整亮度
+     * 调整功率百分比
      */
     public static final String ADJUST_POWER_LEVEL = "AdjustPowerLevel";
+    /**
+     * 设置亮度绝对值
+     */
+    public static final String ADJUST_BRIGHTNESS = "AdjustBrightness";
+    /**
+     * 调整亮度百分比
+     */
+    public static final String SET_BRIGHTNESS = "SetBrightness";
     /**
      * 设置颜色
      */
@@ -76,27 +84,36 @@ public class AlexaControlVO {
     }
 
     /**
-     * 接收亮度值参数
+     * 接收功率值参数, 0~100, https://developer.amazon.com/docs/device-apis/alexa-powerlevelcontroller.html#setpowerlevel
      */
     private Integer powerLevel;
     /**
-     * 接收亮度百分比参数, -100~100
+     * 接收功率百分比参数, -100~100, https://developer.amazon.com/docs/device-apis/alexa-powerlevelcontroller.html#adjustpowerlevel
      */
     private Integer powerLevelDelta;
+
     /**
-     * 接收颜色hvs参数
+     * 接收亮度值参数, 0~100, https://developer.amazon.com/docs/device-apis/alexa-brightnesscontroller.html#setbrightness
+     */
+    private Integer brightness;
+    /**
+     * 接收亮度百分比参数, -100~100, https://developer.amazon.com/docs/device-apis/alexa-brightnesscontroller.html#adjustbrightness
+     */
+    private Integer brightnessDelta;
+    /**
+     * 接收颜色hvs参数, https://developer.amazon.com/docs/device-apis/alexa-colorcontroller.html#setcolor
      */
     private Color color;
     /**
-     * 接收色温值参数
+     * 接收色温值参数, https://developer.amazon.com/docs/device-apis/alexa-colortemperaturecontroller.html#setcolortemperature
      */
     private Integer colorTemperatureInKelvin;
     /**
-     * 接收百分比参数, -100~100
+     * 接收百分比值参数, 0~100, https://developer.amazon.com/docs/device-apis/alexa-percentagecontroller.html#setpercentage
      */
     private Integer percentage;
     /**
-     * 接收百分比比例参数, -100~100
+     * 接收百分比比例参数, -100~100, https://developer.amazon.com/docs/device-apis/alexa-percentagecontroller.html#adjustpercentage
      */
     private Integer percentageDelta;
 
@@ -162,6 +179,22 @@ public class AlexaControlVO {
         this.powerLevelDelta = powerLevelDelta;
     }
 
+    public Integer getBrightness() {
+        return brightness;
+    }
+
+    public void setBrightness(Integer brightness) {
+        this.brightness = brightness;
+    }
+
+    public Integer getBrightnessDelta() {
+        return brightnessDelta;
+    }
+
+    public void setBrightnessDelta(Integer brightnessDelta) {
+        this.brightnessDelta = brightnessDelta;
+    }
+
     public Color getColor() {
         return color;
     }
@@ -219,9 +252,18 @@ public class AlexaControlVO {
     }*/
 
     public static class Color {
-        private float hue; // 色调, 0-360
-        private float saturation; // 饱和度, 0-1
-        private float brightness; // 亮度, 0-1
+        private float hue; // 色调, 0~360
+        private float saturation; // 饱和度, 0~1
+        private float brightness; // 亮度, 0~1
+
+        public Color() {
+        }
+
+        public Color(float hue, float saturation, float brightness) {
+            this.hue = hue;
+            this.saturation = saturation;
+            this.brightness = brightness;
+        }
 
         public float getHue() {
             return hue;

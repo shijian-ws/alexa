@@ -36,14 +36,30 @@ public class AlexaEndpoint {
     public AlexaEndpoint() {
     }
 
-    public AlexaEndpoint(String friendlyName, String manufacturerName, String description, String userId, String gateway, String category, String openId) {
+    public AlexaEndpoint(String friendlyName, String manufacturerName, String description, String userId, String gateway, String category, String operId) {
         this.friendlyName = friendlyName;
         this.manufacturerName = manufacturerName;
         this.description = description;
         this.userId = userId;
         this.gateway = gateway;
         this.setCategory(category);
-        this.setOperId(openId);
+        this.setOperId(operId);
+    }
+
+    public AlexaEndpoint(String friendlyName, String manufacturerName, String description, String userId, String gateway, String category, Set<String> operIds) {
+        this.friendlyName = friendlyName;
+        this.manufacturerName = manufacturerName;
+        this.description = description;
+        this.userId = userId;
+        this.gateway = gateway;
+        this.setCategory(category);
+        this.operIds = operIds;
+    }
+
+    public AlexaEndpoint(String endpointId, String friendlyName, String description) {
+        this.endpointId = endpointId;
+        this.friendlyName = friendlyName;
+        this.description = description;
     }
 
     public String getEndpointId() {

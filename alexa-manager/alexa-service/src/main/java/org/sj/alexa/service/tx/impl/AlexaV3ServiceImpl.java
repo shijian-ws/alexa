@@ -2,8 +2,8 @@ package org.sj.alexa.service.tx.impl;
 
 import org.sj.alexa.dao.IAlexaV3DAO;
 import org.sj.alexa.model.v3.*;
-import org.sj.alexa.model.v3.AlexaControlVO.Color;
 import org.sj.alexa.service.tx.IAlexaV3Service;
+import org.sj.alexa.util.AlexaUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 /**
  * @author shijian
@@ -131,6 +131,11 @@ public class AlexaV3ServiceImpl implements IAlexaV3Service {
         alexaDAO.saveAlexaEndpoint(alexaEndpoint);
     }
 
+    @Override
+    public void updateAlexaEndpoint(AlexaEndpoint alexaEndpoint) {
+        alexaDAO.updateAlexaEndpoint(alexaEndpoint);
+    }
+
     private void removeAlexaEndpoint(List<AlexaEndpoint> list) {
         if (list == null || list.isEmpty()) {
             return;
@@ -158,6 +163,28 @@ public class AlexaV3ServiceImpl implements IAlexaV3Service {
         removeAlexaEndpoint(alexaDAO.listAlexaEndpointByUserIdAndGateway(userId, gateway));
     }
 
+    private static AlexaControlVO checkAndProcess(AlexaEndpoint endpoint, AlexaControlVO vo, BiConsumer<AlexaEndpoint, AlexaControlVO> rcFunc, String respName, Supplier<?> valFunc, boolean checkVal, String error) {
+        if (valFunc == null) {
+            throw new IllegalArgumentException("响应值函数不能为空!");
+        }
+        if (checkVal && valFunc.get() == null) {
+            // 值函数的返回值为空
+            if (error == null) {
+                throw new NullPointerException();
+            }
+            throw new IllegalArgumentException(error);
+        }
+        String namespace = vo.getNamespace();
+        if (!AlexaUtil.checkOper(endpoint, namespace)) {
+            throw new IllegalArgumentException(String.format("Alexa可控设备不支持 %s 操作!", namespace));
+        }
+        // TODO 发送远程控制指令
+        if (rcFunc != null) {
+            rcFunc.accept(endpoint, vo);
+        }
+        return new AlexaControlVO(namespace, respName, valFunc.get()); // 生成响应
+    }
+
     @Override
     public AlexaControlVO remoteControl(AlexaControlVO vo, BiConsumer<AlexaEndpoint, AlexaControlVO> func) {
         if (vo == null) {
@@ -178,128 +205,81 @@ public class AlexaV3ServiceImpl implements IAlexaV3Service {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("远程控制类型不能为空!");
         }
-        // 开关:
-        if (AlexaControlVO.TURN_ON.equals(name) || AlexaControlVO.TURN_OFF.equals(name)) {
-            // 控制打开或关闭
-            // TODO 发送远程控制指令
-            if (func != null) {
-                func.accept(endpoint, vo);
-            }
-            String value;
-            if (AlexaControlVO.TURN_OFF.equals(name)) {
-                value = "ON";
-            } else {
-                value = "OFF";
-            }
-            return new AlexaControlVO(Capability.INTERFACE_POWER, Properties.NAME_POWERSTATE, value); // 生成响应
+        Supplier<?> valFunc = null;
+        boolean checkVal = true;
+        String respName = null;
+        String error = "远程控制%s不能为空!";
+        String arg = null;
+        // 开关: https://developer.amazon.com/docs/device-apis/alexa-powercontroller.html
+        if (AlexaControlVO.TURN_ON.equals(name)) {
+            // 控制打开
+            valFunc = "ON"::intern;
+            respName = Properties.NAME_POWERSTATE;
+            checkVal = false;
+        } else if (AlexaControlVO.TURN_OFF.equals(name)) {
+            valFunc = "OFF"::intern;
+            respName = Properties.NAME_POWERSTATE;
+            checkVal = false;
         }
-        // 亮度: https://developer.amazon.com/docs/device-apis/alexa-powercontroller.html
-        if (AlexaControlVO.SET_POWER_LEVEL.equals(name)) {
-            // 设置亮度绝对值
-            Integer powerLevel = vo.getPowerLevel(); // 设置亮度值
-            if (powerLevel == null) {
-                throw new IllegalArgumentException("远程控制调整亮度值不能为空!");
-            }
-            // TODO 发送远程控制指令
-            if (func != null) {
-                func.accept(endpoint, vo);
-            }
-            return new AlexaControlVO(Capability.INTERFACE_POWERLEVEL, Properties.NAME_POWERLEVEL, powerLevel); // 生成响应
+        // 功率: https://developer.amazon.com/docs/device-apis/alexa-powercontroller.html
+        else if (AlexaControlVO.SET_POWER_LEVEL.equals(name)) {
+            // 设置功率绝对值
+            valFunc = vo::getPowerLevel; // 功率, 0~100
+            respName = Properties.NAME_POWERLEVEL;
+            arg = "调整功率值";
+        } else if (AlexaControlVO.ADJUST_POWER_LEVEL.equals(name)) {
+            // 调整功率百分比
+            valFunc = vo::getPowerLevelDelta; // 功率百分比, -100~100
+            respName = Properties.NAME_POWERLEVEL;
+            arg = "调整功率百分比值";
         }
-        if (AlexaControlVO.ADJUST_POWER_LEVEL.equals(name)) {
-            // 调整亮度百分比
-            Integer powerLevelDelta = vo.getPowerLevelDelta(); // 亮度百分比, -100~100
-            if (powerLevelDelta == null) {
-                throw new IllegalArgumentException("远程控制调整亮度百分比值不能为空!");
-            }
-            // TODO 发送远程控制指令
-            if (func != null) {
-                func.accept(endpoint, vo);
-            }
-            return new AlexaControlVO(Capability.INTERFACE_POWERLEVEL, Properties.NAME_POWERLEVEL, powerLevelDelta); // 生成响应
+        // 亮度: https://developer.amazon.com/docs/device-apis/alexa-brightnesscontroller.html
+        else if (AlexaControlVO.SET_BRIGHTNESS.equals(name)) {
+            // 设置亮度值
+            valFunc = vo::getBrightness; // 亮度值, 0~100
+            respName = Properties.NAME_BRIGHTNESS;
+            arg = "调整亮度值";
+        } else if (AlexaControlVO.ADJUST_BRIGHTNESS.equals(name)) {
+            // 设置亮度百分比
+            valFunc = vo::getBrightnessDelta; // 亮度百分比, -100~100
+            respName = Properties.NAME_BRIGHTNESS;
+            arg = "调整亮度百分比值";
         }
         // 颜色: https://developer.amazon.com/docs/device-apis/alexa-colorcontroller.html
-        if (AlexaControlVO.SET_COLOR.equals(name)) {
+        else if (AlexaControlVO.SET_COLOR.equals(name)) {
             // 设置颜色
-            Color color = vo.getColor();
-            if (color == null) {
-                throw new IllegalArgumentException("远程控制设置颜色参数对象不能为空!");
-            }
-            // TODO 发送远程控制指令
-            if (func != null) {
-                func.accept(endpoint, vo);
-            }
-            return new AlexaControlVO(Capability.INTERFACE_COLOR, Properties.NAME_COLOR, color); // 生成响应
+            valFunc = vo::getColor; // 颜色参数对象
+            respName = Properties.NAME_COLOR;
+            arg = "设置颜色参数对象";
         }
-        // 色温: // https://developer.amazon.com/docs/device-apis/alexa-colortemperaturecontroller.html
-        if (AlexaControlVO.DECREASE_COLOR_TEMPERATURE.equals(name) || AlexaControlVO.INCREASE_COLOR_TEMPERATURE.equals(name)) {
-            // 减少或增加色温
-            /*int warm = 4000; // 当前色温值
-            if (AlexaControlVO.DECREASE_COLOR_TEMPERATURE.equals(name)) {
-                warm = (int) (warm * 0.9); // 减少10%
-            } else {
-                warm = (int) (warm * 1.1); // 增加10%
-            }*/
-            int warm = 0;
-            // TODO 发送远程控制指令
-            if (func != null) {
-                func.accept(endpoint, vo);
-                Integer ctKelvin = vo.getColorTemperatureInKelvin();
-                if (ctKelvin != null) {
-                    warm = ctKelvin.intValue();
-                }
-            }
-            return new AlexaControlVO(Capability.INTERFACE_COLORTEMPERATURE, Properties.NAME_COLOR_TEMPERATURE, warm); // 生成响应
-        }
-        if (AlexaControlVO.SET_COLOR_TEMPERATURE.equals(name)) {
+        // 色温: https://developer.amazon.com/docs/device-apis/alexa-colortemperaturecontroller.html
+        else if (AlexaControlVO.DECREASE_COLOR_TEMPERATURE.equals(name) || AlexaControlVO.INCREASE_COLOR_TEMPERATURE.equals(name)) {
+            // 增加或减少色温
+            valFunc = vo::getColorTemperatureInKelvin; // 色温函数, 用于设置之后的回调响应
+            respName = Properties.NAME_COLOR_TEMPERATURE;
+            checkVal = false;
+        } else if (AlexaControlVO.SET_COLOR_TEMPERATURE.equals(name)) {
             // 设置色温
-            Integer warm = vo.getColorTemperatureInKelvin();
-            if (warm == null) {
-                throw new IllegalArgumentException("远程控制设置色温值参数不能为空!");
-            }
-            // TODO 发送远程控制指令
-            if (func != null) {
-                func.accept(endpoint, vo);
-                Integer temp = vo.getColorTemperatureInKelvin();
-                if (temp != null) {
-                    warm = temp;
-                }
-            }
-            return new AlexaControlVO(Capability.INTERFACE_COLORTEMPERATURE, Properties.NAME_COLOR_TEMPERATURE, warm); // 生成响应
+            valFunc = vo::getColorTemperatureInKelvin; // 色温, 0-100
+            respName = Properties.NAME_COLOR_TEMPERATURE;
+            arg = "设置色温值";
         }
         // 百分比: // https://developer.amazon.com/docs/device-apis/alexa-percentagecontroller.html
-        if (AlexaControlVO.SET_PERCENTAGE.equals(name)) {
+        else if (AlexaControlVO.SET_PERCENTAGE.equals(name)) {
             // 设置百分比, 需要业务定义
-            Integer percentage = vo.getPercentage(); // 百分比值, -100~100
-            if (percentage == null) {
-                throw new IllegalArgumentException("远程控制设置百分比值参数不能为空!");
-            }
-            // TODO 发送远程控制指令
-            if (func != null) {
-                func.accept(endpoint, vo);
-                Integer temp = vo.getPercentage();
-                if (temp != null) {
-                    percentage = temp;
-                }
-            }
-            return new AlexaControlVO(Capability.INTERFACE_PERCENTAGE, Properties.NAME_PERCENTAGE, percentage); // 生成响应
-        }
-        if (AlexaControlVO.ADJUST_PERCENTAGE.equals(name)) {
+            valFunc = vo::getPercentage; // 百分比值, 0~100
+            respName = Properties.NAME_PERCENTAGE;
+            arg = "设置百分比值";
+        } else if (AlexaControlVO.ADJUST_PERCENTAGE.equals(name)) {
             // 设置百分比比例, 需要业务定义
-            Integer percentageDelta = vo.getPercentageDelta();
-            if (percentageDelta == null) {
-                throw new IllegalArgumentException("远程控制设置百分比比例值参数不能为空!");
-            }
-            // TODO 发送远程控制指令
-            if (func != null) {
-                func.accept(endpoint, vo);
-                Integer temp = vo.getPercentageDelta();
-                if (temp != null) {
-                    percentageDelta = temp;
-                }
-            }
-            return new AlexaControlVO(Capability.INTERFACE_PERCENTAGE, Properties.NAME_PERCENTAGE, percentageDelta); // 生成响应
+            valFunc = vo::getPercentageDelta; // 百分比比例, -100~100
+            respName = Properties.NAME_PERCENTAGE;
+            arg = "设置百分比比例值";
         }
-        return null;
+        if (respName == null) {
+            throw new IllegalStateException("不支持的操作!");
+        }
+        error = String.format(error, arg);
+        return checkAndProcess(endpoint, vo, func, respName, valFunc, checkVal, error);
     }
 }

@@ -105,8 +105,19 @@
     </insert>
 
     <insert id="saveAlexaEndpoint">
-        INSERT INTO T_ALEXA_endpoint(ID, FRIENDLY_NAME, DESCRIPTION, MANUFACTURER_NAME, _CATEGORY, USER_ID, GATEWAY, _OPER_ID, CREATION_TIME) VALUES (#{endpointId}, #{friendlyName}, #{description}, #{manufacturerName}, #{category}, #{userId}, #{gateway}, #{operId}, #{creationTime});
+        INSERT INTO T_ALEXA_ENDPOINT(ID, FRIENDLY_NAME, DESCRIPTION, MANUFACTURER_NAME, _CATEGORY, USER_ID, GATEWAY, _OPER_ID, CREATION_TIME) VALUES (#{endpointId}, #{friendlyName}, #{description}, #{manufacturerName}, #{category}, #{userId}, #{gateway}, #{operId}, #{creationTime});
     </insert>
+
+    <update id="updateAlexaEndpoint">
+        <trim prefix="UPDATE T_ALEXA_ENDPOINT SET" suffixOverrides="," suffix="WHERE ID=#{endpointId}">
+            <if test="friendlyName!=null">
+                FRIENDLY_NAME=#{friendlyName},
+            </if>
+            <if test="description!=null">
+                DESCRIPTION=#{description},
+            </if>
+        </trim>
+    </update>
 
     <delete id="removeAlexaPropertiesByCapabilityId">
         DELETE FROM T_ALEXA_PROPERTY WHERE CAPABILITY_ID=#{capabilityId}
@@ -117,6 +128,6 @@
     </delete>
 
     <delete id="removeAlexaEndpointById">
-        DELETE FROM T_ALEXA_endpoint WHERE ID=#{endpointId}
+        DELETE FROM T_ALEXA_ENDPOINT WHERE ID=#{endpointId}
     </delete>
 </mapper>

@@ -68,9 +68,13 @@ public class Properties {
      */
     public static final String NAME_POWERSTATE = "powerState";
     /**
-     * 亮度属性名
+     * 功率属性名
      */
     public static final String NAME_POWERLEVEL = "powerLevel";
+    /**
+     * 亮度属性名
+     */
+    public static final String NAME_BRIGHTNESS = "brightness";
     /**
      * 颜色属性名
      */

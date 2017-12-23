@@ -65,6 +65,11 @@ public interface IAlexaV3DAO {
     long saveAlexaEndpoint(AlexaEndpoint endpoint);
 
     /**
+     * 更新授权Alexa可控设备信息
+     */
+    long updateAlexaEndpoint(AlexaEndpoint endpoint);
+
+    /**
      * 移除功能属性
      */
     long removeAlexaPropertiesByCapabilityId(@Param("capabilityId") String capabilityId);
