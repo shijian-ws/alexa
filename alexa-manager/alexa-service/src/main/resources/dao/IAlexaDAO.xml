@@ -27,7 +27,7 @@
         <result column="INTERFACE" property="interface" javaType="string"/>
         <result column="VERSION" property="version" javaType="string"/>
         <result column="ENDPOINT_ID" property="endpointId" javaType="string"/>
-        <collection property="properties" ofType="org.sj.alexa.model.v3.Properties" select="listPropertyByCapabilityId" column="capabilityId,ID,interface,INTERFACE"/>
+        <association property="properties" javaType="org.sj.alexa.model.v3.Properties" select="getPropertyByCapabilityId" column="capabilityId,ID,interface,INTERFACE"/>
     </resultMap>
 
     <!-- Alexa可控设备功能属性 -->
@@ -67,7 +67,7 @@
     </select>
 
     <!-- 关联查询 -->
-    <select id="listPropertyByCapabilityId" resultMap="propertiesResultMap">
+    <select id="getPropertyByCapabilityId" resultMap="propertiesResultMap">
         SELECT <include refid="propertyField"/> FROM T_ALEXA_PROPERTY WHERE CAPABILITY_ID=#{capabilityId}
     </select>
 
